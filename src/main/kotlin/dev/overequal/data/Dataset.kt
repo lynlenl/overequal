@@ -56,7 +56,8 @@ class Dataset(
     /**
      * Snowflake user-ID → display name, gathered from every author and mention.
      * Lets word charts turn raw `<@123…>` mention tokens (which survive
-     * tokenization as `@123…`) into `@name`. Names here already reflect redaction.
+     * tokenization as `@123…`) into `@name`. Names here are already canonicalized
+     * to each user's latest username by `DatasetLoader`, and reflect redaction.
      */
     val userNamesById: Map<String, String> by lazy {
         val byId = HashMap<String, String>()

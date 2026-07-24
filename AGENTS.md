@@ -17,8 +17,9 @@ re-implement in Kotlin**). Output uses Discord **Components V2**.
 - Scraped messages must be **cached**; viz read from the cache, not a live re-scrape.
 - Visualization outputs must **reflect the time period of the data** (date range in title/footer).
 - **Generalize across all servers**: no hardcoded user/bot/highlight names; no account
-  merging (the reference's `april` case is ignored). Instead provide a **bot-exclusion
-  option** (`excludeBots`, keyed off the `isBot` flag).
+  merging (the reference's `april` case is ignored — that's two *distinct accounts*;
+  one account's renames do merge, see "Member identity"). Instead provide a
+  **bot-exclusion option** (`excludeBots`, keyed off the `isBot` flag).
 
 ## Conventions
 
@@ -60,6 +61,28 @@ re-implement in Kotlin**). Output uses Discord **Components V2**.
 One JSON object per message. Key fields we use: `id`, `timestamp` (ISO-8601), `content`,
 `author{ id, name, nickname, isBot }`, `mentions[]` (author-shaped), `reactions[]`,
 `channel{ id, name, category }`, `guild{ id, name }`. 
+
+## Member identity (user ID, latest username)
+
+A member is a **user ID**, never a username — people rename themselves and a corpus
+scraped over years holds every name they ever had, so name-keyed analysis would split
+one person into several members. `DatasetLoader` resolves this once, at load time:
+
+- **Identity key** = `author.id` (`mention.id` for mentions), falling back to the name
+  for pre-ID records so name-only corpora behave as they always did. It's stored on
+  `Message.authorId` / `Mention.id`.
+- **Label** = that user's **most recent** name in the corpus — the name on their latest
+  message *or* latest mention (a mention can be newer than anything they authored).
+  Every occurrence is relabelled to it, so all name variants collapse into one bar/row/slice.
+- **Collisions**: two distinct IDs whose latest name is identical would merge back into
+  one member, so they get a discriminator (`alice (4821)`, tail of the snowflake; full ID
+  if even that collides).
+- Bot exclusion (`excludeBots`) filters mentions by ID too, so a renamed bot stays excluded.
+- `Redactor` keys pseudonyms on the identity, so a renamed member gets one `member_00N`.
+
+The upshot: the 22 visualizations keep grouping by `authorName` as before — the name is now
+a 1:1 stand-in for the ID — so **no viz needs to know about any of this**. If you add a
+chart, group by `authorName` (or `authorId`); both are per-user. Covered by `IdentityTest`.
 
 ## Visualization theme (see `datavis/config.py`)
 
